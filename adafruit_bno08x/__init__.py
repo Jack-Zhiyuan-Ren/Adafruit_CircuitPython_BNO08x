@@ -933,7 +933,7 @@ class BNO08X:
     @staticmethod
     def _get_feature_enable_report(
         feature_id: int,
-        report_interval: int = _DEFAULT_REPORT_INTERVAL,
+        report_interval: int = 5000, 
         sensor_specific_config: int = 0,
     ) -> bytearray:
         set_feature_report = bytearray(17)
@@ -947,82 +947,82 @@ class BNO08X:
     # TODO: add docs for available features
     # TODO2: I think this should call an fn that imports all the bits for the given feature
     # so we're not carrying around  stuff for extra features
-    # def enable_feature(self, feature_id: int) -> None:
-    #     """Used to enable a given feature of the BNO08x"""
-    #     self._dbg("\n********** Enabling feature id:", feature_id, "**********")
-
-    #     if feature_id == BNO_REPORT_ACTIVITY_CLASSIFIER:
-    #         set_feature_report = self._get_feature_enable_report(
-    #             feature_id, sensor_specific_config=_ENABLED_ACTIVITIES
-    #         )
-    #     else:
-    #         set_feature_report = self._get_feature_enable_report(feature_id)
-
-    #     feature_dependency = _RAW_REPORTS.get(feature_id, None)
-    #     # if the feature was enabled it will have a key in the readings dict
-    #     if feature_dependency and feature_dependency not in self._readings:
-    #         self._dbg("Enabling feature depencency:", feature_dependency)
-    #         self.enable_feature(feature_dependency)
-
-    #     self._dbg("Enabling", feature_id)
-    #     self._send_packet(_BNO_CHANNEL_CONTROL, set_feature_report)
-
-    #     start_time = time.monotonic()  # 1
-
-    #     while _elapsed(start_time) < _FEATURE_ENABLE_TIMEOUT:
-    #         self._process_available_packets(max_packets=10)
-    #         if feature_id in self._readings:
-    #             return
-    #     raise RuntimeError("Was not able to enable feature", feature_id)
-    
-    def enable_feature(
-        self,
-        feature_id: int,
-        report_interval: int = _DEFAULT_REPORT_INTERVAL,   # ← NEW (µs)
-    ) -> None:
-        """Enable one of the BNO08x sensor/algorithm reports.
-
-        Parameters
-        ----------
-        feature_id : int
-            One of the BNO_REPORT_* constants (e.g. BNO_REPORT_ACCELEROMETER).
-        report_interval : int, optional
-            Desired period **in micro-seconds** between successive reports
-            (example – 5_000 µs → 200 Hz).  Default is 50 000 µs (20 Hz).
-        """
+    def enable_feature(self, feature_id: int) -> None:
+        """Used to enable a given feature of the BNO08x"""
         self._dbg("\n********** Enabling feature id:", feature_id, "**********")
 
-        # Build the 17-byte “set-feature” packet
         if feature_id == BNO_REPORT_ACTIVITY_CLASSIFIER:
             set_feature_report = self._get_feature_enable_report(
-                feature_id,
-                report_interval=report_interval,
-                sensor_specific_config=_ENABLED_ACTIVITIES,
+                feature_id, sensor_specific_config=_ENABLED_ACTIVITIES
             )
         else:
-            set_feature_report = self._get_feature_enable_report(
-                feature_id,
-                report_interval=report_interval,
-            )
+            set_feature_report = self._get_feature_enable_report(feature_id)
 
-        # Enable any required parent reports first (raw-data dependency)
-        feature_dependency = _RAW_REPORTS.get(feature_id)
+        feature_dependency = _RAW_REPORTS.get(feature_id, None)
+        # if the feature was enabled it will have a key in the readings dict
         if feature_dependency and feature_dependency not in self._readings:
-            self._dbg("Enabling feature dependency:", feature_dependency)
-            # Propagate the same interval so raw & calibrated stay in sync
-            self.enable_feature(feature_dependency, report_interval=report_interval)
+            self._dbg("Enabling feature depencency:", feature_dependency)
+            self.enable_feature(feature_dependency)
 
-        # Ship it to the sensor
         self._dbg("Enabling", feature_id)
         self._send_packet(_BNO_CHANNEL_CONTROL, set_feature_report)
 
-        # Wait until the hub acknowledges by sending back the first reading
-        start_time = time.monotonic()
+        start_time = time.monotonic()  # 1
+
         while _elapsed(start_time) < _FEATURE_ENABLE_TIMEOUT:
             self._process_available_packets(max_packets=10)
-            if feature_id in self._readings:      # success!
+            if feature_id in self._readings:
                 return
         raise RuntimeError("Was not able to enable feature", feature_id)
+    
+    # def enable_feature(
+    #     self,
+    #     feature_id: int,
+    #     report_interval: int = _DEFAULT_REPORT_INTERVAL,   # ← NEW (µs)
+    # ) -> None:
+    #     """Enable one of the BNO08x sensor/algorithm reports.
+
+    #     Parameters
+    #     ----------
+    #     feature_id : int
+    #         One of the BNO_REPORT_* constants (e.g. BNO_REPORT_ACCELEROMETER).
+    #     report_interval : int, optional
+    #         Desired period **in micro-seconds** between successive reports
+    #         (example – 5_000 µs → 200 Hz).  Default is 50 000 µs (20 Hz).
+    #     """
+    #     self._dbg("\n********** Enabling feature id:", feature_id, "**********")
+
+    #     # Build the 17-byte “set-feature” packet
+    #     if feature_id == BNO_REPORT_ACTIVITY_CLASSIFIER:
+    #         set_feature_report = self._get_feature_enable_report(
+    #             feature_id,
+    #             report_interval=report_interval,
+    #             sensor_specific_config=_ENABLED_ACTIVITIES,
+    #         )
+    #     else:
+    #         set_feature_report = self._get_feature_enable_report(
+    #             feature_id,
+    #             report_interval=report_interval,
+    #         )
+
+    #     # Enable any required parent reports first (raw-data dependency)
+    #     feature_dependency = _RAW_REPORTS.get(feature_id)
+    #     if feature_dependency and feature_dependency not in self._readings:
+    #         self._dbg("Enabling feature dependency:", feature_dependency)
+    #         # Propagate the same interval so raw & calibrated stay in sync
+    #         self.enable_feature(feature_dependency, report_interval=report_interval)
+
+    #     # Ship it to the sensor
+    #     self._dbg("Enabling", feature_id)
+    #     self._send_packet(_BNO_CHANNEL_CONTROL, set_feature_report)
+
+    #     # Wait until the hub acknowledges by sending back the first reading
+    #     start_time = time.monotonic()
+    #     while _elapsed(start_time) < _FEATURE_ENABLE_TIMEOUT:
+    #         self._process_available_packets(max_packets=10)
+    #         if feature_id in self._readings:      # success!
+    #             return
+    #     raise RuntimeError("Was not able to enable feature", feature_id)
 
     def _check_id(self) -> bool:
         self._dbg("\n********** READ ID **********")
