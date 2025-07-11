@@ -933,7 +933,7 @@ class BNO08X:
     @staticmethod
     def _get_feature_enable_report(
         feature_id: int,
-        report_interval: int = 5000, 
+        report_interval: int = _DEFAULT_REPORT_INTERVAL, 
         sensor_specific_config: int = 0,
     ) -> bytearray:
         set_feature_report = bytearray(17)
